@@ -59,6 +59,7 @@ ___
 > - $z_{13} = (0.11)_2 \times 2^{(-11)_2} = 0.75 \times 2^{-3} = 0.09375$
 > - $z_{14} = (0.10)_2 \times 2^{(-11)_2} = 0.5 \times 2^{-3} = 0.0625$
 > ![Image 1.1](images/image1.1.png/)
+> ![Image 1.2](images/image1.2.png)
 
 Observations:
 1. Floating point numbers are not eqally spaced. The spacing "jumps" by a factor of 2 at each power of 2.
@@ -76,3 +77,57 @@ Observations:
 > - $\epsilon_{mach}$ is also called <u>machine precision</u>.
 > - $\epsilon_{mach} = b^{1-m}$.
 > - IMPORTANT: the formula $\epsilon_{mach} = b^{1-m}$ is subject to slight change in single and double precision formats.
+
+> Definition 1.5: The system $F$ can be extended by including <b>subnormal numbers</b> which are implemented by: $\pm (0.0x_2x_3\cdots x_m)_b \times b^{-(b-1,b-1,\cdots,b-1)_b}$, where $0 \leq x_2, x_3,\cdots,x_m \leq b-1$ and $(0.0x_2x_3\cdots x_m)_b \neq 0$.
+> * Recall: Closest to zero normalized number: $\pm (0.10\cdots0)_b \times b^{-(b-1,b-1,\cdots,b-1)_b}$.
+
+> Example 1.2 (cont'd): $F[b = 2, m = 2, e = 2]$
+> $\pm (0.01)_2 \times 2^{-(11)_2} = \pm 0.03125$ is the only subnormal number in this system.
+> ![Image 1.3](images/image1.3.png)
+
+* If we denote the smallest normalized positive number as $\lambda$, the subnormal numbers fill the gap between 0 and $\lambda$ with the same spacing between $\lambda$ and $b\lambda$.
+* Let's see another exmaple: $F[b = 2, m = 3, e = 2]$
+ ![Image 1.4](images/image1.4.png)
+
+
+#### §1.1.2 Rounding, overflow, and underflow
+> Definition 1.6: Let $G \subseteq \mathbb{R}$ denote all real numbers that have the form $z = \pm (0.x_1x_2\dots x_m)_b \times b^y, y\in Z$, i.e., we life the lower and upper limits for the exponent.
+> For $\forall x \in \mathbb{R}$, then $fl(x)$ denotes the nearest number to $x$ in $G$ and the operation $x \mapsto fl(x)$ is called <u>rounding</u>.
+
+> Example 1.2 (cont'd): $F[b = 2, m = 2, e = 2]$
+> ![Image 1.5](images/image1.5.png)
+> Here, $z_1 = 8 \in G \not\in F$.
+> $x_1 = 2.8 \rightarrow fl(x_1) = 3$
+> $x_2 = 4.5 \rightarrow fl(x_2) = 4$
+> $x_3 = 1.25 \rightarrow$ Tie!
+> * Two common tie breakers:
+>   1. round away from zero: $x_3 = 1.25 \rightarrow fl(x_3) = (0.11)_2 \times 2^{(01)_2} = 1.5$
+>   2. round to the one with an even last digit: $x_3 = 1.25 \rightarrow fl(x_3) = (0.10)_2 \times 2^{(01)_2} = 1$
+>
+> $x_4 = 7.7 \rightarrow fl(x_4) = 8 \not\in F$
+
+> Definition 1.7: We say $fl(x)$ overflows if $|fl(x)| > \max \{|z|: z \in F\}$, and underflows if $0 < |fl(x)| < \min \{|z|: z \in F\}$.
+
+> Example 1.2 (cont'd): $F[b = 2, m = 2, e = 2]$
+> $x_5 = 6.1 \rightarrow fl(x_5) = 6$.
+> Thus, the following statement is false:
+> "Overflow occurs when $x$ is bigger than the biggest normalized number in $F$."
+
+> Theorem 1.1 (Unit roundoff): Each real number $x$ such that $fl(x)$ is a normalized number in $F$ has a relative error no larger than $u = \frac{1}{2}\epsilon_{mach}$, which is called unit roundoff.
+> If $x\in \mathbb{R}$ such that $fl(x)$ is normalized in $F$, then $|\delta| = \left|\frac{x - fl(x)}{x}\right| \leq u = \frac{1}{2}\epsilon_{mach}$.
+> * subnormal numbe correspond to bigger relative error.
+
+#### §1.1.3 Standard floating point systems
+
+- Single precision format (32-bit)
+  ![Image 1.6](images/image1.6.png)
+    - Sign bit: $s=1$ for negative, $s=0$ for positive.
+    - Exponent:
+        - We have $2^8 = 256$ exponents, therefore face value $[0,255]$.
+        - We want a range of signed exponents. The convention is face value subtracted by a bias of 127 $\rightarrow [-127,128]$.
+        - When $e = \begin{cases} (00000000)_2 \rightarrow -127 \\ (11111111)_2 \rightarrow 128 \end{cases}$ reserved for subnormals and special numbers.
+        - exponent | mantissa (all zero) | mantissa (not all zero)
+          |-----|-----|-----|
+          | $(00\cdots 00)_2$ |  $\pm 0$ | subnormals |
+          | $(11\cdots 11)_2$ | $\pm \infty$ | NaN (Not a number) |
+- Double precision format (64-bit)
