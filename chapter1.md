@@ -126,8 +126,87 @@ Observations:
         - We have $2^8 = 256$ exponents, therefore face value $[0,255]$.
         - We want a range of signed exponents. The convention is face value subtracted by a bias of 127 $\rightarrow [-127,128]$.
         - When $e = \begin{cases} (00000000)_2 \rightarrow -127 \\ (11111111)_2 \rightarrow 128 \end{cases}$ reserved for subnormals and special numbers.
-        - exponent | mantissa (all zero) | mantissa (not all zero)
+        - |exponent | mantissa (all zero) | mantissa (not all zero)|
           |-----|-----|-----|
           | $(00\cdots 00)_2$ |  $\pm 0$ | subnormals |
           | $(11\cdots 11)_2$ | $\pm \infty$ | NaN (Not a number) |
+        - When $e \in [-126,127]$, we have normalized numbers.
+    - Mantissa:
+        Consider this model we have previously: $(0.x_1x_2\cdots x_{23})_2$
+        - $x_1 \equiv 1$, since:
+          1. $x_1 \geq 1$ (normalized numbers)
+          2. $x_1 \leq 1$ ($b-1=2-1=1$)
+
+        Therefore, convension is: $(1.x_1x_2\cdots x_{23})_2$.
+
+  - A general formula for normalized numbers:
+    $x_0 | x_1x_2\cdots x_{22}x_{23} | y_1y_2\cdots y_8$
+    $\implies (-1)^{x_0}  \times (1.x_1x_2\cdots x_{23})\times 2^{(y_1y_2\cdots y_8)_2 - 127}$
+
+  > Example 1.3: (Important quantities in single precision format)
+  > 1. Biggest positive normalized number: 
+  >    $0|\overbrace{1\cdots1}^{23 \text{ one's}}|\overbrace{01111111}^{8 \text{ bits}}$
+  >    $= (-1)^0 \times (1.\overbrace{111\cdots1}^{23 \text{ one's}})_2 \times 2^{(11111110)_2-127}$
+  >    $= (1\times 2^0 + 1\times 2^{-1} + 1\times 2^{-2} + \cdots + 1\times 2^{-23}) \times 2^{127}$
+  >    $= ((2^{-1})^0 + (2^{-1})^1 + (2^{-1})^2 + \cdots + (2^{-1})^{23}) \times 2^{127}$
+  >    $= (2^{-1})^0 \frac{1 - (2^{-1})^{24}}{1 - 2^{-1}} \times 2^{127}$
+  >    $= (2 - 2^{-23}) \times 2^{127} = 2^{128} - 2^{104}$
+  >    $\approx 3.402823 \times 10^{38}$
+  > 2. Smallest positive normalized number:
+  >    $0|\overbrace{0\cdots0}^{23 \text{ zero's}}|\overbrace{00000001}^{8 \text{ bits}}$
+  >    $= (-1)^0 \times (1.\overbrace{000\cdots0}^{23 \text{ zero's}})_2 \times 2^{(00000000)_2-127}$
+  >    $= 1 \times 2^{-126} = 2^{-126}$
+  >    $\approx 1.175494 \times 10^{-38}$
+  > 3. Machine epsilon:
+  >    Firstly: One: 
+  >    $(-1)^0 \times (1.00\cdots0)_2 \times 2^0$
+  >    $=(-1)^0 \times (1.00\cdots0)_2 \times 2^{(01111111)_2-127}$
+  >    $\implies 0|00\cdots00|01111111$
+  >    Next larger number:
+  >    $0|00\cdots01|01111111$
+  >    $=(-1)^0 \times (1.00\cdots01)_2 \times 2^0$
+  >    $=1 \times 2^0 + 2^{-23} = 1 + 2^{-23}$
+  >    Therefore, $\epsilon_{mach} = 2^{-23} \approx 1.1920929 \times 10^{-7}$.
+
+  |Quantity | Value |
+  |-----|-----|
+  |biggest positive normalized number | $2 ^{128} - 2^{104} \approx 3.402823 \times 10^{38}$ |
+  |smallest positive normalized number | $2^{-126} \approx 1.175494 \times 10^{-38}$ |
+  |machine epsilon | $2^{-23} \approx 1.1920929 \times 10^{-7}$ |
+
+  > IMPORTANT: The formula $\epsilon_{mach} = b^{1-m}$, hence $b = 2$ and $m = 23 \implies \epsilon_{mach} = 2^{1-23} = 2^{-22} \neq 2^{-23}$. This is due to that the assumed leading 1 in the mantissa, despite not being stored, is countributing to a significant bit.
+  > If we want to use $b^{1-m}$, we need to plug in $m = 24$.
+
+  > Example 1.3 (cont'd):
+  > 4.  Overflow:
+    Biggest positive normalized number: $0|\overbrace{1\cdots1}^{23 \text{ one's}}|01111111$
+    $\implies (-1)^0 \times (1.111\cdots1)_2 \times 2^{(11111110)_2 - 127}$
+    $ = (1.111\cdots1)_2 \times 2^{127}$
+    Second biggest positive normalized number: $0|\overbrace{11\cdots10}^{23 \text{ bits}}|01111111$
+    $\implies (-1)^0 \times (1.11\cdots10)_2 \times 2^{127}$
+    $ = 2^{128} - 2^{104} - 2^{104}$
+
+    If no limit on the exponent, the next largest number would be $2^{128}$.
+    Number lying in between $(2^{128} - 2^{104} , 2^{128})$ should still be rounded to $2^{128} - 2^{104}$ (hence not causing overflow) if it is closer to $2^{128} - 2^{104}$.
+
 - Double precision format (64-bit)
+  ![Image 1.7](images/image1.7.png)
+    - It is MATLAB's default format.
+    - `eps = eps('double')` $\approx 2.2204 \times 10^{-16}$.
+      $10^{-16}$ is a magic number , when we have an error of $\mathcal{O}(10^{-16})$, we should be happy.
+
+#### §1.1.4 Floating point operations
+> Definition 1.8: Floating point addition $\oplus$ is defined by:
+> $\forall x, y \in \mathbb{R}$, $fl(x \oplus y) = fl(fl(x) + fl(y))$. Similarly define $\ominus, \otimes, \oslash$.
+
+1. $x \oplus y \oplus z$
+  $ = (x \oplus y) \oplus z$
+  $ = fl(fl(x) + fl(y)) \oplus z$
+  $ = fl(fl(fl(x) + fl(y)) + fl(z))$
+2. $x \oplus y \otimes z$
+  $ = x \oplus (y \otimes z)$
+  $ = fl(x) \oplus fl(fl(y) \otimes fl(z))$
+  $ = fl(fl(x) + fl(fl(y) \times fl(z)))$
+3. $(\cos(x))^2$
+  $ = fl(\cos(fl(x)) \otimes \cos(fl(x)))$
+  $ = fl(fl(\cos(fl(x)))^2)$
