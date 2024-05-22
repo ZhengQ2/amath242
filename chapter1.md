@@ -210,3 +210,86 @@ Observations:
 3. $(\cos(x))^2$
   $ = fl(\cos(fl(x)) \otimes \cos(fl(x)))$
   $ = fl(fl(\cos(fl(x)))^2)$
+
+> Question: Is floating point addition associative, i.e., $x \oplus y \oplus z = x \oplus (y \oplus z)$?
+> Try in MATLAB: 
+> `(1 + eps / 3) + eps / 3 == 1 + (eps / 3 + eps / 3)`
+> Answer: False. `(1 + eps / 3) + eps / 3` would return `1`, while `1 + (eps / 3 + eps / 3)` would return `1 + eps`.
+
+This problem is significant, see the following example:
+```matlab
+while x <= pi
+    ...
+end
+```
+If `x` is very close to `pi`, the loop may iterate one more time or one less time than expected, due to the accumulation of errors.
+
+A better way to write the loop is:
+```matlab
+while abs(x - pi) > eps(x)
+    ...
+end
+```
+This way, the loop will iterate until `x` is within the machine epsilon of `pi`.
+
+#### §1.1.5 Cancelation Error
+- The phenomenon that subtracting two good approximations (say $\hat{x}$ and $\hat{y}$) of two nearby numbers (say $x$ and $y$) may yield a very bad approximation to $x-y$ ($\hat{x} - \hat{y} \not\approx x - y$).
+
+> Example 1.4: (Subtraction between close numbers)
+> We use a decimal floating point system $F[b = 10, m = 5, e = 3]$.
+> $x = 0.100134826 \implies fl(x) = 0.10013$
+> $y = 0.100121111 \implies fl(y) = 0.10012$
+> $\delta x = \frac{x - fl(x)}{x} = 0.0048\%$
+> $\delta y = \frac{y - fl(y)}{y} = 0.0011\%$
+> $z = x - y = 0.000013715$
+> $\hat{z} = fl(x) - fl(y) = fl(0.10013-0.10012) = 0.00001$
+> $\delta z = \frac{z - \hat{z}}{z} = 27\%$
+
+> Example 1.5: (Evaluation of the exponential function)
+> - Exact: $z = \text{exp}(x) = e^x$
+> - Approximation: $\hat{z} = \text{some\_algorithm}(x)$
+>> Algorithm A: Truncation of the Taylor series
+>> - $z = \text{exp}(x) = \sum_{i=0}^{\infty} \frac{x^i}{i!} = 1 + x + \frac{x^2}{2} + \frac{x^3}{6} + \cdots + \frac{x^n}{n!} + \cdots$
+>> - $\hat{z} = \sum_{i=0}^{n} \frac{x^i}{i!} = 1 + x + \frac{x^2}{2} + \frac{x^3}{6} + \cdots + \frac{x^n}{n!}$
+>> This is not a good algorithm!
+>> An example (with $F[b = 10, m = 5, e = 3]$): 
+>> Let $x = -5.5 \implies z = e^{-5.5} \approx 0.0040868$.
+>> Let $n = 24 \implies \hat{z}_A = \sum_{i=0}^{24} \frac{(-5.5)^i}{i!} \overset{\text{in }F}{\implies} 0.0051563$.
+>> Relative error: $\delta z_A = \frac{z - \hat{z}}{z} \approx -41\%$.
+>
+>> Algorithm B: 
+>> For $x > 0$, $\hat{z}_B = \hat{z}_A$.
+>> For $x < 0$, we use $\text{exp}(x) = \text{exp}(-x)^{-1}$.
+>> $\hat{z}_B = \left(\sum_{i=0}^{n} \frac{(-x)^i}{i!}\right)^{-1}$
+>> Test on the same example: $x = -5.5 \implies z = e^{-5.5} \approx 0.0040868$.
+>> Let $n = 24 \implies \hat{z}_B = \left(\sum_{i=0}^{24} \frac{5.5^i}{i!}\right)^{-1} \overset{\text{in }F}{\implies} 0.0040865$.
+>> Relative error: $\delta z_B = \frac{z - \hat{z}}{z} \approx 0.00734\%$.
+
+### §1.2 Conditioning of a math problem
+- Consider a problem $P$ with input $\vec{x}$ and output $\vec{y} = f_P(\vec{x})$.
+- No algorithm or floating point system involved yet!
+
+> Definition 1.9: (Conditioning of $P$)
+> - $P$ is <b>well-conditioned</b> with respect to the absolute error if small change in $\Delta \vec{x}$ in $\vec{x}$ result in small change in $\Delta \vec{z}$ in $\vec{z}$.
+> - $P$ is <b>ill-conditioned</b> with respect to the absolute error if small change in $\Delta \vec{x}$ in $\vec{x}$ result in large change in $\Delta \vec{z}$ in $\vec{z}$.
+> - Similarly, we can define both with respect to the relative error.
+
+> Intermission: (Vector norms)
+> Let $\vec{x} = (x_1, x_2, \cdots, x_n) \in \mathbb{R}^n$.
+> - 2-norm: $\|\vec{x}\|_2 = \sqrt{x_1^2 + x_2^2 + \cdots + x_n^2}$.
+> - 1-norm: $\|\vec{x}\|_1 = |x_1| + |x_2| + \cdots + |x_n|$.
+> - $\infty$-norm: $\|\vec{x}\|_{\infty} = \max\{|x_1|, |x_2|, \cdots, |x_n|\}$.
+> - p-norm: $\|\vec{x}\|_p = \left(\sum_{i=1}^{n} |x_i|^p\right)^{1/p}$ (for $p \geq 1$).
+
+> Definition 1.10: (Condition number of $P$)
+> - The absolute condition number of $P$: $\kappa_{A} = \frac{\|\Delta \vec{z}\|}{\|\vec{x}\|}$.
+> - The relative condition number of $P$: $\kappa_{R} = \frac{\|\Delta \vec{z}\|/\|\vec{z}\|}{\|\Delta \vec{x}\|/\|\vec{x}\|}$.
+
+> Example 1.6: $P: z = x + y$
+> Let $\hat{x} = x - \Delta x$, $\hat{y} = y - \Delta y$, and $\hat{z} = \hat{x} + \hat{y}$.
+> Then $\Delta z = z - \hat{z} = (x + y) - (x - \Delta x + y - \Delta y) = \Delta x + \Delta y$.
+> 1. With 1-norm: $\kappa_{A} = \frac{|\Delta z|}{\|(\Delta x, \Delta y)\|_1} = \frac{|\Delta x + \Delta y|}{|\Delta x| + |\Delta y|} \overset{\text{triangle ineq.}}{\leq} 1$.
+> 2. With 1-norm: $\kappa_{R} = \frac{|\Delta z|/|z|}{\|(\Delta x, \Delta y)\|_1/\|(\vec{x}, \vec{y})\|_1} = \frac{|\Delta x + \Delta y|/|x + y|}{(|\Delta x| + |\Delta y|)/(|x| + |y|)} =  \frac{|\Delta x + \Delta y|}{|\Delta x| + |\Delta y|} \cdot \frac{|x| + |y|}{|x + y|}\leq 1\cdot \frac{|x| + |y|}{|x + y|}$.
+> If $x \to -y$, then $\kappa_{R} < \infty \implies \kappa_{R} \to \infty$.
+> 
+> Therefore, $P$ is well-conditioned with respect to the absolute error, but ill-conditioned with respect to the relative error.
