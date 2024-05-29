@@ -293,3 +293,31 @@ This way, the loop will iterate until `x` is within the machine epsilon of `pi`.
 > If $x \to -y$, then $\kappa_{R} < \infty \implies \kappa_{R} \to \infty$.
 > 
 > Therefore, $P$ is well-conditioned with respect to the absolute error, but ill-conditioned with respect to the relative error.
+
+### §1.3 Stability of an algorithm
+
+- If $P$ is well-conditioned, numerical algorithms for $P$ can still be unstable.
+
+> Example 1.5 (revisiting):
+> $P: z = \text{exp}(x)$.
+> To estimate its condition number:
+> Let $\hat{x} = x - \Delta x$ and $\hat{z} = \text{exp}(\hat{x}) = \text{exp}(x) - \text{exp}(x)\Delta x + \mathcal{O}(\Delta x^2)$.
+> 1. absolute condition number: $\kappa_{A} = \frac{|\Delta z|}{|\Delta x|} = \frac{|z - \hat{z}|}{\Delta x} = \frac{|\text{exp}(x) \Delta x - \mathcal{O}(\Delta x^2)|}{\Delta x} \leq |\text{exp}(x)| + \mathcal{O}(\Delta x) \approx \text{exp}(x)$.
+> $P$ is well-conditioned with respect to the absolute error except for large $|x|$.
+> 2. relative condition number: $\kappa_{R} = \frac{|\Delta z|/|z|}{|\Delta x|/|x|} = \frac{|\Delta z|}{|\Delta x|} \cdot \frac{|x|}{|z|} \approx |\text{exp}(x)| \cdot \frac{|x|}{|\text{exp}(x)|} = |x|$.
+> $P$ is well-conditioned with respect to the relative error except for large $|x|$.
+
+- Recall algorithm A and B for $P: \text{exp}(x)$.
+  - For $x < 0$, algorithm A is unstable even if $|x|$ is small while algorithm B is stable.
+  - "recipe" for "numerical success":
+    well-conditioned problem + stable algorithm
+
+> Intermission: (Taylor series of a function $f(x)$ about a point $x = a$)
+> - $f(x) = f(a) + f'(a)(x-a) + \frac{f''(a)}{2!}(x-a)^2 + \cdots + \frac{f^{(n)}(a)}{n!}(x-a)^n + \cdots = \sum_{n=0}^{\infty} \frac{f^{(n)}(a)}{n!}(x-a)^n$.
+> - Big $\mathcal{O}$ notation: $f(x) = f(a) + + f'(a)(x-a) + \cdots + \frac{f^{(n)}(a)}{n!}(x-a)^n + \mathcal{O}((x-a)^{n+1})$.
+> What we use a lot: $f(x) = f(a) + f'(a)(x-a) + \mathcal{O}((x-a)^2)\ \  \star$. 
+>> Example 1: $f(x) = \text{exp}(x) \implies f'(x) = \text{exp}(x)$.
+>> - $f(x) = \text{exp}(a) + \text{exp}(a)(x-a) + \mathcal{O}((x-a)^2)$.
+>> Consider the problem of evaluating $z = \text{exp}(x)$.
+>> Let $\hat{x} = x - \Delta x$, then $\hat{z} = \text{exp}(\hat{x}) = \text{exp}(x - \Delta x) = \text{exp}(x) + \text{exp}(x)((x - \Delta x) - x) + \mathcal{O}((x - \Delta x - x)^2) = \text{exp}(x) + \text{exp}(x)(- \Delta x) + \mathcal{O}((\Delta x)^2)$.
+>> Thus, $\kappa_{A} = \frac{|z - \hat{z}|}{|x - \hat{x}|} = \frac{|\text{exp}(x) - ({exp}(x) + \text{exp}(x)(- \Delta x) + \mathcal{O}((\Delta x)^2))|}{|\Delta x|}  = |\text{exp}(x) + \mathcal{O}(\Delta x)| \leq \text{exp}(x) + \mathcal{O}(\Delta x) \approx \text{exp}(x)$.
