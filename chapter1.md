@@ -274,12 +274,14 @@ This way, the loop will iterate until `x` is within the machine epsilon of `pi`.
 > - $P$ is <b>ill-conditioned</b> with respect to the absolute error if small change in $\Delta \vec{x}$ in $\vec{x}$ result in large change in $\Delta \vec{z}$ in $\vec{z}$.
 > - Similarly, we can define both with respect to the relative error.
 
-> Intermission: (Vector norms)
-> Let $\vec{x} = (x_1, x_2, \cdots, x_n) \in \mathbb{R}^n$.
-> - 2-norm: $\|\vec{x}\|_2 = \sqrt{x_1^2 + x_2^2 + \cdots + x_n^2}$.
-> - 1-norm: $\|\vec{x}\|_1 = |x_1| + |x_2| + \cdots + |x_n|$.
-> - $\infty$-norm: $\|\vec{x}\|_{\infty} = \max\{|x_1|, |x_2|, \cdots, |x_n|\}$.
-> - p-norm: $\|\vec{x}\|_p = \left(\sum_{i=1}^{n} |x_i|^p\right)^{1/p}$ (for $p \geq 1$).
+---
+Intermission: (Vector norms)
+Let $\vec{x} = (x_1, x_2, \cdots, x_n) \in \mathbb{R}^n$.
+- 2-norm: $\|\vec{x}\|_2 = \sqrt{x_1^2 + x_2^2 + \cdots + x_n^2}$.
+- 1-norm: $\|\vec{x}\|_1 = |x_1| + |x_2| + \cdots + |x_n|$.
+- $\infty$-norm: $\|\vec{x}\|_{\infty} = \max\{|x_1|, |x_2|, \cdots, |x_n|\}$.
+- p-norm: $\|\vec{x}\|_p = \left(\sum_{i=1}^{n} |x_i|^p\right)^{1/p}$ (for $p \geq 1$).
+___
 
 > Definition 1.10: (Condition number of $P$)
 > - The absolute condition number of $P$: $\kappa_{A} = \frac{\|\Delta \vec{z}\|}{\|\vec{x}\|}$.
@@ -312,12 +314,14 @@ This way, the loop will iterate until `x` is within the machine epsilon of `pi`.
   - "recipe" for "numerical success":
     well-conditioned problem + stable algorithm
 
-> Intermission: (Taylor series of a function $f(x)$ about a point $x = a$)
-> - $f(x) = f(a) + f'(a)(x-a) + \frac{f''(a)}{2!}(x-a)^2 + \cdots + \frac{f^{(n)}(a)}{n!}(x-a)^n + \cdots = \sum_{n=0}^{\infty} \frac{f^{(n)}(a)}{n!}(x-a)^n$.
-> - Big $\mathcal{O}$ notation: $f(x) = f(a) + + f'(a)(x-a) + \cdots + \frac{f^{(n)}(a)}{n!}(x-a)^n + \mathcal{O}((x-a)^{n+1})$.
-> What we use a lot: $f(x) = f(a) + f'(a)(x-a) + \mathcal{O}((x-a)^2)\ \  \star$. 
->> Example 1: $f(x) = \text{exp}(x) \implies f'(x) = \text{exp}(x)$.
->> - $f(x) = \text{exp}(a) + \text{exp}(a)(x-a) + \mathcal{O}((x-a)^2)$.
->> Consider the problem of evaluating $z = \text{exp}(x)$.
->> Let $\hat{x} = x - \Delta x$, then $\hat{z} = \text{exp}(\hat{x}) = \text{exp}(x - \Delta x) = \text{exp}(x) + \text{exp}(x)((x - \Delta x) - x) + \mathcal{O}((x - \Delta x - x)^2) = \text{exp}(x) + \text{exp}(x)(- \Delta x) + \mathcal{O}((\Delta x)^2)$.
->> Thus, $\kappa_{A} = \frac{|z - \hat{z}|}{|x - \hat{x}|} = \frac{|\text{exp}(x) - ({exp}(x) + \text{exp}(x)(- \Delta x) + \mathcal{O}((\Delta x)^2))|}{|\Delta x|}  = |\text{exp}(x) + \mathcal{O}(\Delta x)| \leq \text{exp}(x) + \mathcal{O}(\Delta x) \approx \text{exp}(x)$.
+---
+Intermission: (Taylor series of a function $f(x)$ about a point $x = a$)
+- $f(x) = f(a) + f'(a)(x-a) + \frac{f''(a)}{2!}(x-a)^2 + \cdots + \frac{f^{(n)}(a)}{n!}(x-a)^n + \cdots = \sum_{n=0}^{\infty} \frac{f^{(n)}(a)}{n!}(x-a)^n$.
+- Big $\mathcal{O}$ notation: $f(x) = f(a) + + f'(a)(x-a) + \cdots + \frac{f^{(n)}(a)}{n!}(x-a)^n + \mathcal{O}((x-a)^{n+1})$.
+What we use a lot: $f(x) = f(a) + f'(a)(x-a) + \mathcal{O}((x-a)^2)\ \  \star$. 
+> Example 1: $f(x) = \text{exp}(x) \implies f'(x) = \text{exp}(x)$.
+> - $f(x) = \text{exp}(a) + \text{exp}(a)(x-a) + \mathcal{O}((x-a)^2)$.
+> Consider the problem of evaluating $z = \text{exp}(x)$.
+> Let $\hat{x} = x - \Delta x$, then $\hat{z} = \text{exp}(\hat{x}) = \text{exp}(x - \Delta x) = \text{exp}(x) + \text{exp}(x)((x - \Delta x) - x) + \mathcal{O}((x - \Delta x - x)^2) = \text{exp}(x) + \text{exp}(x)(- \Delta x) + \mathcal{O}((\Delta x)^2)$.
+> Thus, $\kappa_{A} = \frac{|z - \hat{z}|}{|x - \hat{x}|} = \frac{|\text{exp}(x) - ({exp}(x) + \text{exp}(x)(- \Delta x) + \mathcal{O}((\Delta x)^2))|}{|\Delta x|}  = |\text{exp}(x) + \mathcal{O}(\Delta x)| \leq \text{exp}(x) + \mathcal{O}(\Delta x) \approx \text{exp}(x)$.
+___
