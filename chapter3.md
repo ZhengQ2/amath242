@@ -480,7 +480,7 @@ $$
 
 *In practice, when having ill-conditioned matrices, before solving for anything, we need to perform **preconditioning** to bring the condition number down! (Beyond the scope of this course)*
 
-### §3.3.3 Stability of the Gaussian Elimination algorithm
+#### §3.3.3 Stability of the Gaussian Elimination algorithm
 
 *Gaussian Elimination can be unstable even if \( A \) (Alg 3.3) is well-conditioned.*
 
@@ -717,3 +717,740 @@ $$
 > 
 > $$
 > \hat{x}_1 = \text{fl}(2-\hat{x_2}) = 1$$
+
+### §3.4 Iterative methods for solving \(A\vec{x} = \vec{b}\)
+
+**Definition 3.7.** \(A \in \mathbb{R}^{n \times n}\) is a sparse matrix if the number of nonzero elements in \(A\) is "much smaller" than \(n^2\).
+
+Motivation
+
+- Large-scale linear systems are usually sparse.
+
+* Direct methods
+  - Can exploit sparsity and reduce costs.
+  - Example: \(n \times n\) matrix from elliptic PDE problem.
+    - Naive direct methods, \(O(n^3)\).
+    - Smart direct methods: \(O(n^{1.5})\)
+
+    for nonzero elements \(O(n)\).
+
+* Iterative methods
+  - Iterate towards \(\vec{x}^* = A^{-1}\vec{b}\) with an iteration,
+    \[
+    \vec{x}^{(i+1)} = f(\vec{x}^{(i)})
+    \]
+  - Error \(\vec{e}(i) = \vec{x}^* - \vec{x}^{(i)}\) defined at \(i\)th step.
+
+![image3.5](images/image3.5.png)
+
+- Same PDE problem as above:
+  - "smart" methods in general: \(O(n^{1.5})\)
+  - "smarter" methods: \(O(n^{1.25})\)
+  - "smartest" methods: \(O(n)\) \(\Rightarrow\) optimal
+
+    since there are \(O(n)\) nonzero elements in \(A\).
+
+* Comparison
+  - Iterative methods: 
+    - faster
+    - definable accuracy
+  - Direct methods:
+    - robust
+    - testing
+
+Convergence of iterative methods can be tricky.
+
+#### §3.4.1 Intro of iterative methods
+
+For solving \(A\vec{x} = \vec{b}\), general stationary iterative method:
+\[
+\vec{x}^{(k+1)} = G\vec{x}^{(k)} + \vec{c}
+\]
+where:
+* \(G\) is called the iteration matrix.
+* If \(G\) does not depend on the history of the iteration, we have a stationary iterative method.
+
+* More efficient methods (like Conjugate Gradient) are not stationary (beyond scope of this course).
+
+* Stopping criterion
+
+**Definition 3.8**. The residual of a linear system \(A\vec{x} - \vec{b}\) for some vector \(\vec{x}\) is:
+\[
+\vec{r} = \vec{b} - A\vec{x}
+\]
+
+- Residual can be a measurement of how close \(\vec{x}\) is to \(\vec{x}^*\). When \(\vec{x} = \vec{x}^*\), \(\vec{r} = \vec{0}\).
+\[
+\vec{x}^* = A^{-1}\vec{b}
+\]
+
+- At each iteration,
+\[
+\vec{r}(k) = \vec{b} - A\vec{x}(k)
+\]
+can be computed with cheap cost (when \(A\) is sparse).
+
+- For a given relative tolerance \(\tau_{tol} = 10^{-6}\), we adopt stopping criterion:
+\[
+\frac{||\vec{r}(k)||}{||\vec{r}(0)||} < \tau_{tol}
+\]
+
+**Definition 3.9.** (Stationary iteration based on matrix splitting) 
+The iterative method based on splitting 
+\[
+A = M + N
+\]
+is given by:
+\[
+(M + N)\vec{x} = \vec{b}
+\]
+\[
+M\vec{x} = -N\vec{x} + \vec{b}
+\]
+\[
+\vec{x} = -M^{-1}N\vec{x} + M^{-1}\vec{b}
+\]
+\[
+\vec{x}^{(k+1)} = -M^{-1}N\vec{x}^{(k)} + M^{-1}\vec{b}
+\]
+Here, the iteration matrix \(G = -M^{-1}N\).
+
+Notation: For a matrix \(A \in \mathbb{R}^{n \times n}\), consider the following splitting:
+\[
+A = D + L + U
+\]
+\(D\): a diagonal matrix formed by the diagonal of \(A\).
+
+\(L\): strictly lower-triangular matrix formed by the lower triangle of \(A\).
+
+\(U\): strictly upper-triangular matrix formed by the upper triangle of \(A\).
+
+**WARNING**: Not the same \(L\) & \(U\) as in the LU factorization.
+
+e.g.
+\[
+A = \begin{pmatrix}
+7 & 2 & 4 \\
+3 & 5 & -1 \\
+2 & 5 & -6
+\end{pmatrix}
+\]
+
+\[
+D = \begin{pmatrix}
+7 & 0 & 0 \\
+0 & 5 & 0 \\
+0 & 0 & -6
+\end{pmatrix}, \quad
+L = \begin{pmatrix}
+0 & 0 & 0 \\
+3 & 0 & 0 \\
+2 & 5 & 0
+\end{pmatrix}, \quad
+U = \begin{pmatrix}
+0 & 2 & 4 \\
+0 & 0 & -1 \\
+0 & 0 & 0
+\end{pmatrix}
+\]
+
+### Method I (Jacobi method)
+
+* Matrix splitting: \(A = M + N\) where \(M = D\) and \(N = L + U\).
+
+* Iterative matrix: \(G = -D^{-1}(L + U)\)
+\[
+G = -D^{-1}(A - D)
+\]
+\[
+= I - D^{-1}A
+\]
+
+* Iteration:
+\[
+\vec{x}^{(k+1)} = -D^{-1}(L + U)\vec{x}^{(k)} + D^{-1}\vec{b}
+\]
+
+* Component-wise:
+
+Let \(\vec{x}^{new} = -D^{-1}(L + U)\vec{x}^{old} + D^{-1}\vec{b}\). 
+We illustrate how \(\vec{x}^{new}\) is computed from \(\vec{x}^{old}\) with an example \(R^{3 \times 3}\) matrix:
+\[
+D\vec{x}^{new} = -(L + U)\vec{x}^{old} + \vec{b}
+\]
+
+$$
+\begin{pmatrix}
+a_{11} & 0 & 0 \\
+0 & a_{22} & 0 \\
+0 & 0 & a_{33}
+\end{pmatrix}
+\begin{pmatrix}
+x_1^{new} \\
+x_2^{new} \\
+x_3^{new}
+\end{pmatrix} =
+\begin{pmatrix}
+0 & -a_{12} & -a_{13} \\
+-a_{21} & 0 & -a_{23} \\
+-a_{31} & -a_{32} & 0
+\end{pmatrix}
+\begin{pmatrix}
+x_1^{old} \\
+x_2^{old} \\
+x_3^{old}
+\end{pmatrix}
++
+\begin{pmatrix}
+b_1 \\
+b_2 \\
+b_3
+\end{pmatrix}
+$$
+
+\[
+\begin{cases}
+a_{11} x_1^{new} = b_1 - a_{12} x_2^{old} - a_{13} x_3^{old} \\
+a_{22} x_2^{new} = b_2 - a_{21} x_1^{old} - a_{23} x_3^{old} \\
+a_{33} x_3^{new} = b_3 - a_{31} x_1^{old} - a_{32} x_2^{old}
+\end{cases}
+\]
+
+A compact and general version:
+\[
+x_i^{new} = \frac{1}{a_{ii}} \left( b_i - \sum_{j \neq i} a_{ij} x_j^{old} \right)
+\]
+
+* Each iteration requires storing two vectors \(\vec{x}^{new}\) and \(\vec{x}^{old}\).
+
+* Update of \(x_i^{new}\) for different \(i\)'s happens parallelly (actually, "embarrassingly parallel"). (This is a real terminology with its Wikipedia page.)
+
+**Algorithm 3.5 (Jacobi iteration)**
+
+```python
+# Initial guess x^(0)
+k = 0
+r^(0) = b - A x^(0)
+while |r^(k)| / |r^(0)| > tau_tol do
+    for i = 1 : n
+        sigma = 0
+        for j = 1 : n
+            if j != i
+                sigma = sigma + a_ij x_j^(k)
+            end
+        end
+        x_i^(k+1) = (b_i - sigma) / a_ii
+    end
+    r^(k+1) = b - A x^(k+1)
+    k = k + 1
+end
+```
+
+### Method II (Gauss-Seidel method)
+
+* Matrix splitting: \(A = M + N\) where \(M = D + L\) and \(N = U\).
+
+* Iterative matrix: \(G = -(D + L)^{-1}U\)
+
+* Iteration:
+\[
+\vec{x}^{(k+1)} = -(D + L)^{-1}U\vec{x}^{(k)} + (D + L)^{-1}\vec{b}
+\]
+
+* Component-wise:
+\[
+(D + L)\vec{x}^{new} = -U\vec{x}^{old} + \vec{b}
+\]
+
+\[
+\begin{pmatrix}
+a_{11} & 0 & 0 \\
+a_{21} & a_{22} & 0 \\
+a_{31} & a_{32} & a_{33}
+\end{pmatrix}
+\begin{pmatrix}
+x_1^{new} \\
+x_2^{new} \\
+x_3^{new}
+\end{pmatrix} =
+\begin{pmatrix}
+0 & -a_{12} & -a_{13} \\
+0 & 0 & -a_{23} \\
+0 & 0 & 0
+\end{pmatrix}
+\begin{pmatrix}
+x_1^{old} \\
+x_2^{old} \\
+x_3^{old}
+\end{pmatrix}
++
+\begin{pmatrix}
+b_1 \\
+b_2 \\
+b_3
+\end{pmatrix}
+\]
+
+\[
+\begin{cases}
+a_{11} x_1^{new} = b_1 - a_{12} x_2^{old} - a_{13} x_3^{old} \\
+a_{22} x_2^{new} = b_2 - a_{21} x_1^{new} - a_{23} x_3^{old} \\
+a_{33} x_3^{new} = b_3 - a_{31} x_1^{new} - a_{32} x_2^{new}
+\end{cases}
+\]
+
+A compact and general version:
+\[
+x_i^{new} = \frac{1}{a_{ii}} \left( b_i - \sum_{j=1}^{i-1} a_{ij} x_j^{new} - \sum_{j=i+1}^{n} a_{ij} x_j^{old} \right)
+\]
+
+* Successive relaxation:
+  * \(x_i^{new}\) is immediately used in obtaining \(x_{i+1}^{new}\) whereas \(x_i^{old}\) is discarded.
+  * Only need to store one vector (two for Jacobi).
+  * Harder to implement in parallel.
+
+**Algorithm 3.6 (Gauss-Seidel iteration)**
+
+```python
+# Initial guess x^(0), initial residual: r^(0) = b - A x^(0).
+k = 0
+r^(0) = b - A x^(0)
+while |r^(k)| / |r^(0)| > tau_tol do
+    for i = 1 : n
+        sigma = 0
+        for j = 1 : n
+            if j != i
+                sigma = sigma + a_{ij} x_j
+            end
+        end
+        x_i = (b_i - sigma) / a_{ii}
+    end
+    r = b - A x
+    k = k + 1
+end
+```
+### Method III (Successive over relaxation (SOR) method)
+
+* Matrix splitting: \(A = M + N\) where \(M = \frac{1}{\omega} D + L\) and \(N = (\frac{1}{\omega} - 1)D + U\).
+  - \(\omega\): relaxation factor (\(\omega = 1\): Gauss-Seidel).
+
+* Iterative matrix: \(G = (\frac{1}{\omega} D + L)^{-1} ((\frac{1}{\omega} - 1)D - U)\)
+
+* Iteration:
+\[
+\vec{x}^{(k+1)} = (\frac{1}{\omega} D + L)^{-1} ((\frac{1}{\omega} - 1)D - U) \vec{x}^{(k)} + (\frac{1}{\omega} D + L)^{-1} \vec{b}
+\]
+
+* Component-wise:
+\[
+(\frac{1}{\omega} D + L) \vec{x}^{new} = ((\frac{1}{\omega} - 1)D - U) \vec{x}^{old} + \vec{b}
+\]
+
+\[
+\begin{pmatrix}
+\frac{1}{\omega} a_{11} & 0 & 0 \\
+a_{21} & \frac{1}{\omega} a_{22} & 0 \\
+a_{31} & a_{32} & \frac{1}{\omega} a_{33}
+\end{pmatrix}
+\begin{pmatrix}
+x_1^{new} \\
+x_2^{new} \\
+x_3^{new}
+\end{pmatrix} =
+\begin{pmatrix}
+(\frac{1}{\omega} - 1)a_{11} - a_{12} - a_{13} \\
+(\frac{1}{\omega} - 1)a_{21} - a_{23} \\
+(\frac{1}{\omega} - 1)a_{31}
+\end{pmatrix}
+\begin{pmatrix}
+x_1^{old} \\
+x_2^{old} \\
+x_3^{old}
+\end{pmatrix}
++
+\begin{pmatrix}
+b_1 \\
+b_2 \\
+b_3
+\end{pmatrix}
+\]
+
+\[
+\frac{1}{\omega} a_{ii} x_i^{new} + \sum_{j < i} a_{ij} x_j^{new} = (\frac{1}{\omega} - 1) a_{ii} x_i^{old} - \sum_{j > i} a_{ij} x_j^{old} + b_i
+\]
+
+\[
+x_i^{new} = (1 - \omega) x_i^{old} + \frac{\omega}{a_{ii}} \left( b_i - \sum_{j < i} a_{ij} x_j^{new} - \sum_{j > i} a_{ij} x_j^{old} \right)
+\]
+
+* To update \(x_i^{new}\) we have a weighted combination of \(x_i^{old}\) and the Gauss-Seidel update of \(x_i^{new}\).
+
+* Same storage requirement as Gauss-Seidel, only need one vector. 
+
+**Algorithm 3.7 (SOR iteration)**
+
+```python
+# Initial guess x^(0), initial residual: r^(0) = b - A x^(0).
+k = 0
+r^(0) = b - A x^(0)
+while |r^(k)| / |r^(0)| > tau_tol do
+    for i = 1 : n
+        sigma = 0
+        for j = 1 : n
+            if j != i
+                sigma = sigma + a_ij x_j
+            end
+        end
+        x_i = (1 - w) x_i + w (b_i - sigma) / a_ii
+    end
+    r = b - A x
+    k = k + 1
+end
+```
+
+### §3.4.2 Convergence theory of iterative methods
+
+**Definition 3.10 (Spectral radius of a matrix A)**
+
+Let \(\lambda_1, \lambda_2, ..., \lambda_n\) be the set of eigenvalues of \(A \in \mathbb{R}^{n \times n}\), the spectral radius of \(A\) is defined as:
+\[
+\rho(A) = \max \{ |\lambda_1|, |\lambda_2|, ..., |\lambda_n| \}
+\]
+
+Example 3.6 (1) \(A = \begin{pmatrix} 9 & -1 & 2 \\ -2 & 8 & 4 \\ 1 & 1 & 8 \end{pmatrix}\)
+
+To find eigenvalues:
+\[
+\text{det}(A - \lambda I) = \text{det} \begin{pmatrix} 9 - \lambda & -1 & 2 \\ -2 & 8 - \lambda & 4 \\ 1 & 1 & 8 - \lambda \end{pmatrix}
+\]
+\[
+= -\lambda^3 + 25\lambda^2 - 200\lambda + 500
+\]
+\[
+= -(\lambda - 10)^2(\lambda - 5) = 0 \implies \lambda = 5, 10
+\]
+\[
+\Rightarrow \rho(A) = \max \{ |5|, |10| \} = 10
+\]
+
+(2) \(A = \begin{pmatrix} 0 & 1 \\ -1 & 0 \end{pmatrix}\)
+
+\[
+\text{det}(A - \lambda I) = \text{det} \begin{pmatrix} -\lambda & 1 \\ -1 & -\lambda \end{pmatrix} = \lambda^2 + 1 = 0 \implies \lambda = \pm i
+\]
+\[
+\Rightarrow \rho(A) = \max \{ |i|, |-i| \} = \max \{ 1, 1 \} = 1
+\]
+
+**Theorem 3.5 (Convergence of iterative methods)**
+
+Let an iterative method be given by
+\[
+\vec{x}^{(k+1)} = G \vec{x}^{(k)} + \vec{c}
+\]
+
+with an initial guess \(\vec{x}^{(0)}\). Then it converges for all \(\vec{x}^{(0)} \in \mathbb{R}^n\) if and only if \(\rho(G) < 1\).
+
+We won't prove this theorem, but we try to make some sense of it.
+
+- What is it converging to?
+
+When \(\vec{x}^{(k+1)} = G\vec{x}^{(k)} + \vec{c}\) converges,
+\[
+\lim_{k \to \infty} \vec{x}^{(k+1)} = \lim_{k \to \infty} (G\vec{x}^{(k)} + \vec{c})
+\]
+\[
+\Rightarrow \vec{x}^* = G\vec{x}^* + \vec{c}
+\]
+\[
+\Rightarrow (I - G)\vec{x}^* = \vec{c}
+\]
+
+For example, considering Jacobi iteration,
+\[
+G = -D^{-1}(L + U)
+\]
+\[
+\vec{c} = D^{-1}\vec{b}
+\]
+
+then
+\[
+(I - G)\vec{x}^* = \vec{c} \text{ becomes:}
+\]
+\[
+(I + D^{-1}(L + U))\vec{x}^* = D^{-1}\vec{b}
+\]
+\[
+\Leftrightarrow (D + L + U)\vec{x}^* = \vec{b}
+\]
+\[
+\Leftrightarrow A\vec{x}^* = \vec{b}
+\]
+
+When \(G\) and \(\vec{c}\) are properly set up, \(\vec{x}^{(k+1)} = G\vec{x}^{(k)} + \vec{c}\) converges to \(\vec{x}^*\) which is the solution of \(A\vec{x} = \vec{b}\).
+
+- Why \(\rho(G) < 1\) ?
+
+Let \(\vec{e}^k\) where \(A\vec{x}^* = \vec{b}\) and \(\vec{e}^{(k)} = \vec{x}^* - \vec{x}^{(k)}\). Then,
+\[
+\vec{x}^{(k+1)} = G\vec{x}^{(k)} + \vec{c}
+\]
+\[
+\vec{x}^* = G\vec{x}^* + \vec{c}
+\]
+\[
+\Rightarrow \vec{e}^{(k+1)} = G\vec{e}^{(k)}
+\]
+\[
+\Rightarrow \vec{e}^{(k)} = G^k\vec{e}^{(0)} = G^k(\vec{x}^* - \vec{x}^{(0)})
+\]
+
+Let \(\{\lambda_i, \vec{v}_i\}_{i=1}^n\) be the full set of eigenvalues and eigenvectors of \(G\) and let
+\[
+\vec{e}^{(0)} = \sum_{i=1}^n a_i\vec{v}_i
+\]
+where \(a_i\)s are the expansion coefficients of \(\vec{e}^{(0)}\) with respect to \(\{\vec{v}_i\}_{i=1}^n\).
+
+Then
+\[
+\vec{e}^{(k)} = G^{k-1} G \vec{e}^{(0)}
+\]
+\[
+= G^{k-1} \sum_{i=1}^n a_i G \vec{v}_i
+\]
+\[
+= G^{k-1} \sum_{i=1}^n a_i \lambda_i \vec{v}_i
+\]
+\[
+= G^{k-2} \sum_{i=1}^n a_i \lambda_i^2 \vec{v}_i
+\]
+\[
+\vdots
+\]
+\[
+= \sum_{i=1}^n a_i \lambda_i^k \vec{v}_i
+\]
+
+\[
+|\vec{e}^{(k)}|_p = |\sum_{i=1}^n a_i \lambda_i^k \vec{v}_i|_p \leq \sum_{i=1}^n |a_i| |\lambda_i^k| |\vec{v}_i|_p
+\]
+
+If \(\rho(G) = \max_{1 \leq i \leq n} |\lambda_i| < 1\), \( |\vec{e}^{(k)}|_p \to 0 \) as \(k \to \infty\).
+
+* Full proof can be found at:
+
+E. Isaacson & H.B. Keller 1994
+"Analysis of Numerical Methods"
+Chapter 1, Theorem 4.
+
+In light of Theorem 3.5, we can show the convergence of Jacobi & Gauss-Seidel when applied to a special family of matrices: strictly diagonally dominant matrices.
+
+**Definition 3.11** \(A \in \mathbb{R}^{n \times n}\) is strictly diagonally dominant if
+\[
+|a_{ii}| > \sum_{j=1, j \neq i}^n |a_{ij}| \quad \text{for all row } i
+\]
+
+**Example 3.7**
+\[
+A = \begin{pmatrix}
+7 & 2 & 0 \\
+3 & 5 & -1 \\
+0 & 5 & -6
+\end{pmatrix}
+\]
+\[
+|7| > |2| + |0|
+\]
+\[
+|5| > |3| + |-1|
+\]
+\[
+|-6| > |0| + |5|
+\]
+
+**Proposition 3.6** A strictly diagonally dominant matrix is non-singular.
+
+* We need a famous linear algebra result:
+
+[ **Gershgorin Circle Theorem** ]
+Let \(A\) be an \(n \times n\) matrix & \(\lambda_i = \sum_{j=1, j \neq i}^n |a_{ij}| \text{ for } 1 \leq i \leq n \).
+If \(\lambda\) is an eigenvalue of \(A\),
+then there exists \(r \, (1 \leq r \leq n)\) such that,
+\[
+|\lambda - a_{rr}| \leq \lambda_r
+\]
+
+* For interested readers
+  Let \(\vec{u}\) be an eigenvector associated with \(\lambda\)
+  and \(\vec{u}\) is normalized such that \(\max_i |u_i| = 1\).
+  Since \(A\vec{u} = \lambda\vec{u}\),
+  we have \(\sum_{j=1}^n a_{ij} u_j = \lambda u_i \forall 1 \leq i \leq n \),
+  i.e.
+  \[
+  ( \lambda - a_{ii}) u_i = \sum_{j=1, j \neq i}^n a_{ij} u_j \forall i
+  \]
+
+  choose \(r\) such that \(|u_r| = 1\) then,
+  \[
+  | (\lambda - a_{rr}) u_r| = | \sum_{j=1, j \neq r}^n a_{rj} u_j|
+  \]
+  \[
+  \Rightarrow |\lambda - a_{rr}| \leq \sum_{j=1, j \neq r}^n |a_{rj}|
+  \]
+
+By Gershgorin Circle Theorem, we know that every eigenvalue of \(A\) lies within at least one of the Gershgorin circles \((a_{ii} : center, \sum_{j=1, j \neq i}^n |a_{ij}| : radius) i = 1, 2, 3, ..., n \).
+
+Since \(|a_{ii}| > \sum_{j=1, j \neq i}^n |a_{ij}|, A\) being strictly diagonally dominant,
+we deduce that 0 is not within any Gershgorin circle.
+
+This means that all eigenvalues of \(A\) are non-zero.
+Hence \(A\) is non-singular.
+
+An illustration using Example 3.7:
+\[
+A = \begin{pmatrix}
+7 & 2 & 0 \\
+3 & 5 & -1 \\
+0 & 5 & -6
+\end{pmatrix}
+\]
+
+| Row   | Center | Radius                             |
+|-------|--------|------------------------------------|
+| Row 1 | \(a_{11} = 7\) | \(\lambda_1 = \|2\| + \|0\| = 2\)         |
+| Row 2 | \(a_{22} = 5\) | \(\lambda_2 = \|3\| + \|-1\| = 4\)        |
+| Row 3 | \(a_{33} = -6\) | \(\lambda_3 = \|0\| + \|5\| = 5\)         |
+
+![image3.6](images/image3.6.png)
+
+**Theorem 3.6.** Consider \(A\vec{x} = \vec{b}\) & any starting vector \(\vec{x}^{(0)}\).
+
+Let \(\{\vec{x}^{(i)}\}_{i \geq 0}\) be the sequence generated by either Jacobi or Gauss-Seidel methods.
+If \(A\) is strictly diagonally dominant, the sequence converges to the unique solution of \(A\vec{x} = \vec{b}\).
+
+Proof Due to Theorem 3.5, we show that when the matrix is strictly diagonally dominant, the spectral radius of the two iteration matrices is smaller than 1, \(\rho(-M^{-1}N) < 1\).
+
+We only show the Jacobi method:
+\[
+\begin{aligned}
+G &= -D^{-1}(L + U)\\
+&= -\begin{pmatrix}
+a_{11}^{-1} & 0 & 0 \\
+0 & a_{22}^{-1} & 0 \\
+0 & 0 & a_{33}^{-1}
+\end{pmatrix}
+\begin{pmatrix}
+0 & a_{12} & a_{13} \\
+a_{21} & 0 & a_{23} \\
+a_{31} & a_{32} & 0
+\end{pmatrix}\\
+&= \begin{pmatrix}
+0 & -a_{12}/a_{11} & -a_{13}/a_{11} \\
+-a_{21}/a_{22} & 0 & -a_{23}/a_{22} \\
+-a_{31}/a_{33} & -a_{32}/a_{33} & 0
+\end{pmatrix}
+\end{aligned}
+\]
+
+By Gershgorin Circle Theorem:
+
+\(\forall \lambda\) of \(G\), we have \(\exists r, 1 \leq r \leq n\), such that
+\[
+|\lambda - 0| = |\lambda| \leq \sum_{j=1, j \neq r}^n \left|\frac{a_{rj}}{a_{rr}}\right| = \sum_{j=1, j \neq r}^n \left|\frac{a_{rj}}{a_{rr}}\right| < 1
+\]
+*Strictly diagonally dominant*
+
+Proof of Gauss-Seidel is omitted. Interested readers: Yousuf Saad "Iterative Methods for Sparse Linear Systems" 2nd edition, Theorem 4.9.
+
+**Example 3.7 (Revisited)**
+\[
+A = \begin{pmatrix}
+7 & 2 & 0 \\
+3 & 5 & -1 \\
+0 & 5 & -6
+\end{pmatrix}
+\]
+
+We know that since \(A\) is strictly diagonally dominant, Jacobi & Gauss-Seidel, when applied to \(A\vec{x} = \vec{b}\) for any \(\vec{b}\), converge.
+
+We have now a sufficient condition for convergence of Jacobi & Gauss-Seidel Methods.
+
+What if \(A\) is not strictly diagonally dominant?
+
+**Proposition 3.7** For any natural matrix norm \(\|\cdot\|\),
+\[
+\rho(G) \leq \|G\| \quad \forall G \in \mathbb{R}^{n \times n}
+\]
+
+Proof: For \(\lambda\) eigenvalue \(\lambda\) of \(G\) we have its eigenvector \(\vec{u}\), assumed to be normalized, i.e. \(\|\vec{u}\| = 1\). Then:
+\[
+\|G\| = \sup_{\vec{v} \neq 0} \frac{\|G\vec{v}\|}{\|\vec{v}\|} \geq \frac{\|G\vec{u}\|}{\|\vec{u}\|} = \|G\vec{u}\| = |\lambda| \|\vec{u}\| = |\lambda|
+\]
+
+Thus, \(|\lambda| \leq \|G\|\), therefore \(\rho(G) \leq \|G\|\).
+
+**Example 3.8 (1)** 
+\[
+A = \begin{pmatrix}
+2 & -1 & 0 \\
+-1 & 2 & -1 \\
+0 & -1 & 2
+\end{pmatrix}
+\]
+No strictly diagonally dominant
+*for row #2:*
+\[
+|2| = |-1| + |-1|
+\]
+
+Jacobi: 
+\[
+G = -D^{-1}(L + U) = I - D^{-1}A = \begin{pmatrix}
+0 & 1/2 & 0 \\
+1/2 & 0 & 1/2 \\
+0 & 1/2 & 0
+\end{pmatrix}
+\]
+
+\[
+\|G\|_1 = 1 \implies \rho(G) \leq 1 \text{ : not useful!}
+\]
+\[
+\|G\|_{\infty} = 1 \implies \rho(G) \leq 1 \text{ : not useful!}
+\]
+\[
+\|G\|_2 = \sigma_{\max}(G) \approx 0.7071 \implies \rho(G) \leq 0.7071 < 1
+\]
+\[
+\implies \text{Convergence of Jacobi}
+\]
+
+(2) 
+\[
+A = \begin{pmatrix}
+4 & -1 & -1 \\
+-1 & 2 & -1 \\
+-1 & -1 & 4
+\end{pmatrix}
+\]
+No strictly diagonally dominant!
+*for row #2:*
+\[
+|2| = |-1| + |-1|
+\]
+
+Jacobi: 
+\[
+G = \begin{pmatrix}
+0 & 1/4 & 1/4 \\
+1/2 & 0 & 1/2 \\
+1/4 & 1/4 & 0
+\end{pmatrix}
+\]
+
+\[
+\|G\|_1 = \max \left\{ \frac{1}{2} + \frac{1}{4}, \frac{1}{4} + \frac{1}{4}, \frac{1}{4} + \frac{1}{2} \right\} = \frac{3}{4} < 1
+\]
+
+Thus, \(\rho(G) \leq \|G\|_1 < 1 \implies \text{Convergence of Jacobi}\).
